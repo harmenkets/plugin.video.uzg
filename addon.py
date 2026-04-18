@@ -50,8 +50,7 @@ def setMediaView():
 
 def homeMenu():
     xbmcplugin.setPluginCategory(_handle, 'NPO Start')
-    # for category in ['Live kanalen', 'Zoeken']:
-    for category in ['Live kanalen', 'Zoeken', 'Alle programmas']:
+    for category in ['Live kanalen', 'Zoeken',  'Omroepen', 'Alle programmas']:
         list_item = xbmcgui.ListItem(label=category)
         url = getUrl(action=category, guid=None, productId=None, slug=None)
         is_folder = True

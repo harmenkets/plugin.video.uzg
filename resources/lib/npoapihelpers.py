@@ -4,6 +4,7 @@ from datetime import datetime
 from resources.lib.jsonhelper import ToJsonObject
 from urllib.request import urlopen, Request
 from typing import List
+import xbmc
 
 class NpoHelpers():
 
@@ -19,26 +20,24 @@ class NpoHelpers():
     @staticmethod
     def getBuildId(url):
         req = Request(url)
-        req.add_header(
-            'User-Agent',
-            'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36')
+        req.add_header('User-Agent', xbmc.getUserAgent())
         req.add_header('Content-Type', 'application/json; charset=utf-8')
         response = urlopen(req)
-        website = response.read()
+        website = str(response.read())
         response.close()
 
-        regex = r"buildId\":\"([A-z0-9_-]*)"
-
-        match = re.findall(regex, str(website))
+        match = re.findall(r"buildId\":\"([A-z0-9_-]*)", website)
         if match:
             return match[0]
+        match = re.findall(r"collectionId\":\"([A-z0-9_-]*)", website)
+        if match:
+            return match[0]
+        raise Exception("Geen id gevonden in:\n{}".format(website))
 
     @staticmethod
     def getJsonData(url):
         req = Request(url)
-        req.add_header(
-            'User-Agent',
-            'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36')
+        req.add_header('User-Agent', xbmc.getUserAgent())
         req.add_header('Content-Type', 'application/json; charset=utf-8')
         response = urlopen(req)
         link = response.read()
@@ -56,7 +55,7 @@ class NpoHelpers():
             'dnt': '1',
             'origin': 'https://npo.nl',
             'referer': 'https://npo.nl/',
-            'user-agent': 'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+            'user-agent': xbmc.getUserAgent(),
         }
 
         data = ToJsonObject()
@@ -85,7 +84,7 @@ class NpoHelpers():
             'accept': 'application/json, text/plain, */*',
             'accept-language': 'en,en-US;q=0.9,nl;q=0.8,nl-NL;q=0.7,en-NL;q=0.6',
             'content-type': 'application/json',
-            'user-agent': 'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+            'user-agent': xbmc.getUserAgent(),
         }
 
         req = Request('https://npo.nl/start/api/domain/player-token?productId={}'.format(externalId), method='GET')
@@ -139,14 +138,14 @@ class NpoHelpers():
             # We have seasonKey go to the episodes view
             return 'episodesSeason'
         if 'type' in item:
-            if item['type'] in ["PAGE", "SERIES", "PROGRAM", "DYNAMIC_PAGE"]:
+            if item['type'] in ["PAGE", "SERIES", "PROGRAM", "DYNAMIC_PAGE", "BROADCASTER"]:
                 return 'collection'
             if item['type'] == "timebound_daily":
                 return 'episodesSerie'
             if item['type'] in ["timeless_series", "timebound_series", "umbrella_series"]:
                 return 'seasons'
             raise Exception("Onbekend type [{}] gevonden in item:\n{}".format(item['type'], item))
-        if 'slug' in item:
+        if 'slug' in item or ('page' in item and 'slug' in item['page']):
             return 'webcollectie'
         return 'unknown'
 
@@ -164,6 +163,8 @@ class NpoHelpers():
                 return item['label']
         if 'seasonKey' in item:
             return 'Season {}'.format(item['seasonKey'])
+        if 'name' in item:
+            return item['name']
         print(item)
         return '-?-'
 
@@ -208,8 +209,7 @@ class NpoHelpers():
             if item['broadcasters']:
                 for broadcaster in item['broadcasters']:
                     broadcasters.append(broadcaster['name'])
-            return broadcasters
-        return None
+        return broadcasters
 
     @staticmethod
     def getGenres(item) -> List[str]:
@@ -218,5 +218,4 @@ class NpoHelpers():
             if item['genres']:
                 for genre in item['genres']:
                     genres.append(genre['name'])
-            return genres
-        return None
+        return genres

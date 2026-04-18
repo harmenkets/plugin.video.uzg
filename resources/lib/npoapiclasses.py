@@ -65,6 +65,8 @@ class JsonToItems(object):
                 slug = None
                 if 'slug' in item:
                     slug = item['slug']
+                if 'page' in item:
+                    slug = item['page']['slug']
                 if 'productId' in item:
                     productId = item['productId']
                 if 'externalId' in item:
@@ -117,13 +119,27 @@ class SeasonItems(object):
     def getItems(self, slug) -> List[AddonItems]:
         url = 'https://npo.nl/start/api/domain/series-seasons?slug={}'.format(slug)
         return JsonToItems.getItems(NpoHelpers.getJsonData(url))
-    
+
 class QueryItems(object):
     def getItems(self, text) -> List[AddonItems]:
         url = 'https://npo.nl/start/api/domain/search-collection-items?searchQuery={}&searchType=series&subscriptionType=anonymous'.format(text.replace(' ', '%20'))
         return JsonToItems.getItems(NpoHelpers.getJsonData(url))
 
-class Channels(object):   
+class Channels(object):
     def getItems(self) -> List[AddonItems]:
         url = 'https://npo.nl/start/api/domain/guide-channels'
+        return JsonToItems.getItems(NpoHelpers.getJsonData(url))
+
+class Broadcasters(object):
+    def __init__(self):
+        self.buildId = None
+
+    def getCollectionId(self):
+        if self.buildId is None:
+            url = 'https://npo.nl/start/api/domain/page-layout?layoutId=ontdek&layoutType=PAGE&includePremiumContent=false'
+            self.buildId = NpoHelpers.getBuildId(url)
+        return self.buildId
+
+    def getItems(self, collectionId) -> List[AddonItems]:
+        url = 'https://npo.nl/start/api/domain/page-collection?collectionId={}&collectionIndex=1&collectionType=BROADCASTER&includePremiumContent=false&layoutType=PAGE'.format(collectionId)
         return JsonToItems.getItems(NpoHelpers.getJsonData(url))
