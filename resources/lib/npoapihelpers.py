@@ -18,31 +18,32 @@ class NpoHelpers():
         return info, licenseKey
 
     @staticmethod
-    def getBuildId(url):
+    def readResponse(url):
         req = Request(url)
         req.add_header('User-Agent', xbmc.getUserAgent())
         req.add_header('Content-Type', 'application/json; charset=utf-8')
-        response = urlopen(req)
-        website = str(response.read())
-        response.close()
+        with urlopen(req) as response:
+            return response.read()
 
+    @staticmethod
+    def getCollectionId(url):
+        website = str(NpoHelpers.readResponse(url))
+        match  = re.findall(r"collectionId\":\"([A-z0-9_-]*)", website)
+        if match:
+            return match[0]
+        raise Exception("Geen collectionId gevonden in:\n{}".format(website))
+
+    @staticmethod
+    def getBuildId(url):
+        website = str(NpoHelpers.readResponse(url))
         match = re.findall(r"buildId\":\"([A-z0-9_-]*)", website)
         if match:
             return match[0]
-        match = re.findall(r"collectionId\":\"([A-z0-9_-]*)", website)
-        if match:
-            return match[0]
-        raise Exception("Geen id gevonden in:\n{}".format(website))
+        raise Exception("Geen buildId gevonden in:\n{}".format(website))
 
     @staticmethod
     def getJsonData(url):
-        req = Request(url)
-        req.add_header('User-Agent', xbmc.getUserAgent())
-        req.add_header('Content-Type', 'application/json; charset=utf-8')
-        response = urlopen(req)
-        link = response.read()
-        response.close()
-        return json.loads(link)
+        return json.loads(NpoHelpers.readResponse(url))
 
     @staticmethod
     def getStream(token):

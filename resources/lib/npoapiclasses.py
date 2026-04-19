@@ -137,7 +137,7 @@ class Broadcasters(object):
     def getCollectionId(self):
         if self.buildId is None:
             url = 'https://npo.nl/start/api/domain/page-layout?layoutId=ontdek&layoutType=PAGE&includePremiumContent=false'
-            self.buildId = NpoHelpers.getBuildId(url)
+            self.buildId = NpoHelpers.getCollectionId(url)
         return self.buildId
 
     def getItems(self, collectionId) -> List[AddonItems]:
