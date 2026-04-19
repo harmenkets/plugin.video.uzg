@@ -30,7 +30,7 @@ class Uzg:
         elif action == 'webcollectie':
             buildId = self.allItems.getBuildId()
             return self.allItems.getItems('https://npo.nl/start/_next/data/{}/collectie/{}.json?slug={}'.format(buildId, slug, slug))
-        elif action == 'Zoeken':
+        elif action.startswith('Zoeken'):
             if text:
                 return self.queryItems.getItems(text)
             return []

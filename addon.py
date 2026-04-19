@@ -51,7 +51,7 @@ def setMediaView():
 def homeMenu():
     xbmcplugin.setPluginCategory(_handle, 'NPO Start')
     # for category in ['Live kanalen', 'Zoeken']:
-    for category in ['Live kanalen', 'Zoeken', 'Alle programmas']:
+    for category in ['Live kanalen', 'Zoeken', 'Zoeken (met filters)', 'Alle programmas']:
         list_item = xbmcgui.ListItem(label=category)
         url = getUrl(action=category, guid=None, productId=None, slug=None)
         is_folder = True
@@ -123,23 +123,72 @@ def playVideo(productId):
             playitem.setProperty('inputstream.adaptive.license_key', licenseKey)
         xbmcplugin.setResolvedUrl(_handle, True, listitem=playitem)
 
+def addSearchFilters(queryParams, soort) -> str:
+    genres = [
+        'Amusement', 'Animatie', 'Consumenteninformatie', 'Detective', 'Drama', 'Geschiedenis', 'Gezondheid/Opvoeding', 'Jeugd/Amusement',
+        'Jeugd/Informatief', 'Jeugd/Muziek', 'Jeugd/Sport', 'Koken/Eten', 'Komisch', 'Kunst/Cultuur', 'Levensbeschouwing', 'Misdaad', 'Muziek',
+        'Natuur', 'Nieuws/Actualiteit', 'Politiek', 'Reizen', 'Religie', 'Spanning', 'Spel/Quiz', 'Sport', 'Wetenschap', 'Wonen/Tuin'
+    ]
+    types = ['Documentaires', 'Films', 'Jeugd-documentaires', 'Jeugd-films', 'Jeugd-series', 'Series']
+    maxLengtes = [
+        xbmcgui.ListItem(label='Geen', label2=''),
+        xbmcgui.ListItem(label='< 30 minuten', label2='30-min'),
+        xbmcgui.ListItem(label='< 1 uur', label2='1-uur'),
+        xbmcgui.ListItem(label='< 2 uur', label2='30-min')
+    ]
+    soorten = [
+        xbmcgui.ListItem(label="Series en programma's", label2='series'),
+        xbmcgui.ListItem(label='Afleveringen', label2='broadcasts')
+    ]
+
+    dialog = xbmcgui.Dialog()
+    gekozenGenres = dialog.multiselect(heading="Filter op genre", options=genres)
+    if gekozenGenres is None:
+        xbmc.log("queryParam {}".format(queryParams), level=1)
+        return f"{queryParams}{soort}"
+    queryParams = f"{queryParams}&searchFilters=genre={"".join(map(lambda x: genres[x].replace('/', '-').lower() + ',', gekozenGenres))}"
+
+    gekozenTypes = dialog.multiselect(heading="Filter op type", options=types)
+    if gekozenTypes is None:
+        return f"{queryParams}{soort}"
+    queryParams = f"{queryParams}&type={"".join(map(lambda x: types[x].lower() + ',', gekozenTypes))}"
+
+    gekozenMaxLengte = dialog.select(heading="Filter op duur", list=maxLengtes)
+    if gekozenMaxLengte is -1:
+        return f"{queryParams}{soort}"
+    if gekozenMaxLengte > 0:
+        queryParams = f"{queryParams}&duur={maxLengtes[gekozenMaxLengte].getLabel2()}"
+
+    gekozenSoort = dialog.select(heading="Soort resultaat", list=soorten, preselect=0)
+    if gekozenSoort is -1:
+        return f"{queryParams}{soort}"
+    queryParams = f"{queryParams}&searchType={soorten[gekozenSoort].getLabel2()}"
+
+    return queryParams
+
 def router(paramstring):
     params = dict(parse_qsl(paramstring))
     if params:
         text = None
-        if params['action'] == 'Zoeken':
+        action = params['action']
+        if action.startswith('Zoeken'):
             dialog = xbmcgui.Dialog()
             input_dialog = dialog.input(_addon.getLocalizedString(32004), type=xbmcgui.INPUT_ALPHANUM)
             if input_dialog:
                 text = input_dialog
-        
-        if params['action'] == 'play':
+            defaultSoort = "&searchType=series"
+            if 'filters' in action:
+                text = addSearchFilters(text, defaultSoort)
+            else:
+                text = f"{text}{defaultSoort}"
+
+        if action == 'play':
             playVideo(params['productId'])
         else:
             # action will give list of items from api
-            items = uzg.getItems(params['action'], params['guid'], params['productId'], params['slug'], text)
+            items = uzg.getItems(action, params['guid'], params['productId'], params['slug'], text)
             if items is not None:
-                addItems(items, params['action'])
+                addItems(items, action)
             else:
                 raise ValueError('Invalid paramstring: {0}!'.format(paramstring))
     else:
